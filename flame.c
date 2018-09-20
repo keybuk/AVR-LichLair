@@ -5,12 +5,14 @@
 
 #include <stdlib.h>
 
-static const int port[] = { PB0, PB1, PB3, PB4 };
+static const int port[] = { PORTB0, PORTB1, PORTB3, PORTB4 };
 volatile uint8_t* pwm[] = { &OCR0A, &OCR0B, &OCR1A, &OCR1B };
-static const int ports = 4;
+
+#define ports 4
+int ch[ports];
 
 ISR(TIMER1_COMPA_vect) {
-	if ((TIFR & _BV(TOV1)) == 0)
+	if (!bit_is_set(TIFR, TOV1))
 		PORTB |= _BV(port[2]);
 }
 
@@ -19,32 +21,33 @@ ISR(TIMER1_OVF_vect) {
 }
 
 int main() {
-	int ch[ports];
-	int i;
-
 	cli();
 
-	// Decode in a sec.
-	  // Configure counter/timer0 for fast PWM on PB0 and PB1
-	TCCR0A = 3<<COM0A0 | 3<<COM0B0 | 3<<WGM00;
-	TCCR0B = 0<<WGM02 | 3<<CS00; // Optional; already set
-	// Configure counter/timer1 for fast PWM on PB4
-	TCCR1 = 1<<CTC1 | 1<<PWM1A | 3<<COM1A0 | 7<<CS10;
-	GTCCR = 1<<PWM1B | 3<<COM1B0;
-	// Interrupts on OC1A match and overflow
-	TIMSK = TIMSK | 1<<OCIE1A | 1<<TOIE1;
+	// Configure Timer/Counter0 for fast PWM on PB0 and PB1.
+	TCCR0A = (_BV(COM0A1) | _BV(COM0A0) |
+		      _BV(COM0B1) | _BV(COM0B0) |
+		      _BV(WGM01) | _BV(WGM00));
+	TCCR0B = _BV(CS01) | _BV(CS00);
 
-	for (i = 0; i < ports; ++i) {
-		DDRB |= _BV(port[i]);
-		// PORTB |= _BV(port[i]);
-		ch[i] = 5 + random() % 10;
-	}
+	// Configure Timer/Counter1 for fast PWM on PB4.
+	// Match the PCK/64 prescale of Timer/Counter0.
+	TCCR1 = (_BV(CTC1) | _BV(PWM1A) |
+		     _BV(COM1A1) | _BV(COM1A0) |
+		     _BV(CS12) | _BV(CS11) | _BV(CS10));
+	GTCCR = _BV(PWM1B) | _BV(COM1B1) | _BV(COM1B0);
+
+	// We can't connect the OCR1A PWM output to PB3 in hardware; enable
+	// timer interrupts on match and overflow to do it in software.
+	TIMSK |= _BV(OCIE1A) | _BV(TOIE1);
+
+	// Enable all four ports for output.
+	DDRB |= _BV(DDB0) | _BV(DDB1) | _BV(DDB3) | _BV(DDB4);
 
 	sei();
 
 	for (;;) {
-		for (i = 0; i < ports; ++i) {
-			if (!--ch[i]) {
+		for (int i = 0; i < ports; ++i) {
+			if (!ch[i]--) {
 				*pwm[i] = 135 + random() % 120;
 				ch[i] = 5 + random() % 10;
 			}
