@@ -24,13 +24,15 @@ int main() {
 	cli();
 
 	// Configure Timer/Counter0 for fast PWM on PB0 and PB1.
+	// Use inverted (set/clear) mode for consistency.
 	TCCR0A = (_BV(COM0A1) | _BV(COM0A0) |
 		      _BV(COM0B1) | _BV(COM0B0) |
 		      _BV(WGM01) | _BV(WGM00));
 	TCCR0B = _BV(CS01) | _BV(CS00);
 
-	// Configure Timer/Counter1 for fast PWM on PB4.
-	// Match the PCK/64 prescale of Timer/Counter0.
+	// Configure Timer/Counter1 for PWM on PB4.
+	// Match the PCK/64 prescale of Timer/Counter0 and use set/clear
+	// mode for consistency.
 	TCCR1 = (_BV(CTC1) | _BV(PWM1A) |
 		     _BV(COM1A1) | _BV(COM1A0) |
 		     _BV(CS12) | _BV(CS11) | _BV(CS10));
@@ -48,7 +50,7 @@ int main() {
 	for (;;) {
 		for (int i = 0; i < ports; ++i) {
 			if (!ch[i]--) {
-				*pwm[i] = 135 + random() % 120;
+				*pwm[i] = random() % 235;
 				ch[i] = 5 + random() % 10;
 			}
 		}
