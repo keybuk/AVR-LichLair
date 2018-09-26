@@ -11,7 +11,7 @@ LDFLAGS = -mmcu=$(AVRCHIP)
 DEFINES = -DF_CPU=$(F_CPU)
 LIBS = -Wl,-u,vfprintf -lprintf_flt -lm
 
-all: blink.hex flame.hex
+all: blink.hex flame.hex magic_circle.hex
 
 
 .c.o:
